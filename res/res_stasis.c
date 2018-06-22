@@ -517,13 +517,19 @@ static struct ast_channel *prepare_bridge_moh_channel(void)
 /*! Provides the moh channel with a thread so it can actually play its music */
 static void *moh_channel_thread(void *data)
 {
-	struct ast_channel *moh_channel = data;
+	struct stasis_app_bridge_channel_wrapper *moh_wrapper = data;
+	struct ast_channel *moh_channel = ast_channel_get_by_name(moh_wrapper->channel_id);
 
 	while (!ast_safe_sleep(moh_channel, 1000)) {
 	}
 
+	ao2_lock(app_bridges_moh);
+	ao2_unlink_flags(app_bridges_moh, moh_wrapper, OBJ_NOLOCK);
+
 	ast_moh_stop(moh_channel);
 	ast_hangup(moh_channel);
+
+	ao2_unlock(app_bridges_moh);
 
 	return NULL;
 }
@@ -591,7 +597,7 @@ static struct ast_channel *bridge_moh_create(struct ast_bridge *bridge)
 		return NULL;
 	}
 
-	if (ast_pthread_create_detached(&threadid, NULL, moh_channel_thread, chan)) {
+	if (ast_pthread_create_detached(&threadid, NULL, moh_channel_thread, new_wrapper)) {
 		ast_log(LOG_ERROR, "Failed to create channel thread. Abandoning MOH channel creation.\n");
 		ao2_unlink_flags(app_bridges_moh, new_wrapper, OBJ_NOLOCK);
 		ast_hangup(chan);
@@ -611,12 +617,12 @@ struct ast_channel *stasis_app_bridge_moh_channel(struct ast_bridge *bridge)
 	if (!moh_wrapper) {
 		chan = bridge_moh_create(bridge);
 	}
-	ao2_unlock(app_bridges_moh);
 
 	if (moh_wrapper) {
 		chan = ast_channel_get_by_name(moh_wrapper->channel_id);
 		ao2_ref(moh_wrapper, -1);
 	}
+	ao2_unlock(app_bridges_moh);
 
 	return chan;
 }
