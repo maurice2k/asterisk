@@ -1384,6 +1384,15 @@
 									"#"
 								]
 							}
+						},
+						{
+							"name": "returnStream",
+							"description": "Returns recording as stream",
+							"paramType": "query",
+							"required": false,
+							"allowMultiple": false,
+							"dataType": "boolean",
+							"defaultValue": false
 						}
 					],
 					"errorResponses": [

@@ -637,7 +637,7 @@ struct ast_ari_channels_record_args {
 	int beep;
 	/*! DTMF input to terminate recording */
 	const char *terminate_on;
-	/*! Whether or not to return the recording stream */
+	/*! Returns recording as stream */
 	int return_stream;
 };
 /*!
