@@ -868,7 +868,7 @@ void ast_ari_channels_record(struct ast_variable *headers,
 		return;
 	}
 
-	if (response->fd > -1) {
+	if (args->return_stream && response->fd > 0) {
 		static const char *format_type_names[AST_MEDIA_TYPE_TEXT + 1] = {
 			[AST_MEDIA_TYPE_UNKNOWN] = "binary",
 			[AST_MEDIA_TYPE_AUDIO] = "audio",
