@@ -1409,6 +1409,7 @@ struct ast_filestream *ast_writefile(const char *filename, const char *type, con
 	char *buf = NULL;
 	size_t size = 0;
 	int format_found = 0;
+	char *fd_prefix = "fd://";
 
 	AST_RWLIST_RDLOCK(&formats);
 
@@ -1435,11 +1436,20 @@ struct ast_filestream *ast_writefile(const char *filename, const char *type, con
 		else
 			format_found = 1;
 
-		fn = build_filename(filename, type);
-		if (!fn) {
-			continue;
+		fd = -1;
+		if (strncmp(filename, fd_prefix, strlen(fd_prefix)) == 0) {
+			sscanf(filename + strlen(fd_prefix), "%d", &fd);
 		}
-		fd = open(fn, flags | myflags, mode);
+
+		fn = NULL;
+		if (fd == -1) {
+			fn = build_filename(filename, type);
+			if (!fn) {
+				continue;
+			}
+			fd = open(fn, flags | myflags, mode);
+		}
+
 		if (fd > -1) {
 			/* fdopen() the resulting file stream */
 			bfile = fdopen(fd, ((flags | myflags) & O_RDWR) ? "w+" : "w");

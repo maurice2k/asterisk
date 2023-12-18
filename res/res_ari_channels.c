@@ -2229,6 +2229,10 @@ int ast_ari_channels_record_parse_body(
 	if (field) {
 		args->terminate_on = ast_json_string_get(field);
 	}
+	field = ast_json_object_get(body, "returnStream");
+	if (field) {
+		args->return_stream = ast_json_integer_get(field);
+	}
 	return 0;
 }
 

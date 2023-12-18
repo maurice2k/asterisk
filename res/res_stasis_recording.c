@@ -397,8 +397,13 @@ struct stasis_app_recording *stasis_app_control_record(
 	recording->duration.total = -1;
 	recording->duration.energy_only = -1;
 
-	ast_asprintf(&recording->absolute_name, "%s/%s",
-		ast_config_AST_RECORDING_DIR, options->name);
+	if (recording->options->return_stream_fd > -1) {
+		ast_asprintf(&recording->absolute_name, "fd://%d",
+			recording->options->return_stream_fd);
+	} else {
+		ast_asprintf(&recording->absolute_name, "%s/%s",
+			ast_config_AST_RECORDING_DIR, options->name);
+	}
 
 	if (recording->absolute_name == NULL) {
 		errno = ENOMEM;
@@ -423,7 +428,8 @@ struct stasis_app_recording *stasis_app_control_record(
 	recording->control = control;
 	recording->state = STASIS_APP_RECORDING_STATE_QUEUED;
 
-	if ((recording->options->if_exists == AST_RECORD_IF_EXISTS_FAIL) &&
+	if ((recording->options->return_stream_fd < 0) &&
+			(recording->options->if_exists == AST_RECORD_IF_EXISTS_FAIL) &&
 			(ast_fileexists(recording->absolute_name, NULL, NULL))) {
 		ast_log(LOG_WARNING, "Recording file '%s' already exists and ifExists option is failure.\n",
 			recording->absolute_name);

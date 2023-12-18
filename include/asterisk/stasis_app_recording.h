@@ -30,6 +30,7 @@
 
 #include "asterisk/app.h"
 #include "asterisk/stasis_app.h"
+#include "asterisk/ari.h"
 
 /*! @{ */
 
@@ -192,6 +193,8 @@ struct stasis_app_recording_options {
 	enum ast_record_if_exists if_exists;
 	/*! If true, a beep is played at the start of recording */
 	int beep:1;
+	/*! Save recording to this fd (if set) */
+	int return_stream_fd;
 };
 
 /*!
