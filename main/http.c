@@ -470,6 +470,7 @@ void ast_http_send(struct ast_tcptls_session_instance *ser,
 	int close_connection;
 	struct ast_str *server_header_field = ast_str_create(MAX_SERVER_NAME_LENGTH);
 	int send_content;
+	char *content_length_header = NULL;
 
 	if (!ser || !server_header_field) {
 		/* The connection is not open. */
@@ -521,6 +522,9 @@ void ast_http_send(struct ast_tcptls_session_instance *ser,
 	}
 
 	send_content = method != AST_HTTP_HEAD || status_code >= 400;
+	if (!ast_asprintf(&content_length_header, "Content-Length: %d\r\n", content_length)) {
+		content_length_header = NULL;
+	}
 
 	/* send http header */
 	if (ast_iostream_printf(ser->stream,
@@ -530,7 +534,7 @@ void ast_http_send(struct ast_tcptls_session_instance *ser,
 		"%s"
 		"%s"
 		"%s"
-		"Content-Length: %d\r\n"
+		"%s"
 		"\r\n"
 		"%s",
 		status_code, status_title ? status_title : "OK",
@@ -539,7 +543,7 @@ void ast_http_send(struct ast_tcptls_session_instance *ser,
 		close_connection ? "Connection: close\r\n" : "",
 		static_content ? "" : "Cache-Control: no-cache, no-store\r\n",
 		http_header ? ast_str_buffer(http_header) : "",
-		content_length,
+		content_length_header != NULL ? content_length_header : "",
 		send_content && out && ast_str_strlen(out) ? ast_str_buffer(out) : ""
 		) <= 0) {
 		ast_debug(1, "ast_iostream_printf() failed: %s\n", strerror(errno));
@@ -555,6 +559,7 @@ void ast_http_send(struct ast_tcptls_session_instance *ser,
 		}
 	}
 
+	ast_free(content_length_header);
 	ast_free(http_header);
 	ast_free(out);
 	ast_free(server_header_field);
