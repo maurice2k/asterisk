@@ -397,9 +397,9 @@ struct stasis_app_recording *stasis_app_control_record(
 	recording->duration.total = -1;
 	recording->duration.energy_only = -1;
 
-	if (recording->options->return_stream_fd > 0) {
+	if (options->return_stream_fd > 0) {
 		ast_asprintf(&recording->absolute_name, "fd://%d",
-			recording->options->return_stream_fd);
+			options->return_stream_fd);
 	} else {
 		ast_asprintf(&recording->absolute_name, "%s/%s",
 			ast_config_AST_RECORDING_DIR, options->name);
