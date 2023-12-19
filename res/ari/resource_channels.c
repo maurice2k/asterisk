@@ -813,6 +813,8 @@ void ast_ari_channels_record(struct ast_variable *headers,
 		}
 		response->fd = pipefd[0];
 		options->return_stream_fd = pipefd[1];
+		ast_debug(3, "Record streaming using pipe; write_fd=%d, read_fd=%d\n",
+			options->return_stream_fd, response->fd);
 	}
 
 	if (options->if_exists == AST_RECORD_IF_EXISTS_ERROR) {

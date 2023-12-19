@@ -405,6 +405,10 @@ struct stasis_app_recording *stasis_app_control_record(
 			ast_config_AST_RECORDING_DIR, options->name);
 	}
 
+	ast_debug(3, "%s: Recording to %s\n",
+		stasis_app_control_get_channel_id(control),
+		recording->absolute_name);
+
 	if (recording->absolute_name == NULL) {
 		errno = ENOMEM;
 		ao2_ref(recording, -1);
