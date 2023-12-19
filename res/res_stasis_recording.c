@@ -415,7 +415,7 @@ struct stasis_app_recording *stasis_app_control_record(
 		return NULL;
 	}
 
-	if ((last_slash = strrchr(recording->absolute_name, '/'))) {
+	if ((options->return_stream_fd <= 0) && (last_slash = strrchr(recording->absolute_name, '/'))) {
 		*last_slash = '\0';
 		if (ast_safe_mkdir(ast_config_AST_RECORDING_DIR,
 				recording->absolute_name, 0777) != 0) {
