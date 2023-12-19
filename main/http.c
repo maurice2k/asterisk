@@ -543,7 +543,7 @@ void ast_http_send(struct ast_tcptls_session_instance *ser,
 		close_connection ? "Connection: close\r\n" : "",
 		static_content ? "" : "Cache-Control: no-cache, no-store\r\n",
 		http_header ? ast_str_buffer(http_header) : "",
-		content_length_header != NULL ? content_length_header : "",
+		content_length_header != NULL && content_length > 0 ? content_length_header : "",
 		send_content && out && ast_str_strlen(out) ? ast_str_buffer(out) : ""
 		) <= 0) {
 		ast_debug(1, "ast_iostream_printf() failed: %s\n", strerror(errno));
