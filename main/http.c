@@ -464,7 +464,7 @@ void ast_http_send(struct ast_tcptls_session_instance *ser,
 	struct timeval now = ast_tvnow();
 	struct ast_tm tm;
 	char timebuf[80];
-	char buf[256];
+	char *buf;
 	int len;
 	int content_length = 0;
 	int close_connection;
@@ -545,18 +545,42 @@ void ast_http_send(struct ast_tcptls_session_instance *ser,
 		http_header ? ast_str_buffer(http_header) : "",
 		content_length_header != NULL && content_length > 0 ? content_length_header : "",
 		send_content && out && ast_str_strlen(out) ? ast_str_buffer(out) : ""
-		) <= 0) {
+	) <= 0) {
 		ast_debug(1, "ast_iostream_printf() failed: %s\n", strerror(errno));
 		close_connection = 1;
 	} else if (send_content && fd) {
+		buf = ast_malloc(4 + 2 + 4096 + 2);  // 4096 + some extra for chunked encoding (4 bytes for chunk size, 2 bytes for CRLF, 2 bytes for final CRLF)
+
 		/* send file content */
-		while ((len = read(fd, buf, sizeof(buf))) > 0) {
-			if (ast_iostream_write(ser->stream, buf, len) != len) {
+		while ((len = read(fd, buf+6, 4096)) > 0) {
+			int offset = 6;
+
+			// check if we need to send chunked encoding
+			if (content_length == 0) {
+				if (len < 16) {
+					offset = 3;
+				} else if (len < 256) {
+					offset = 2;
+				} else if (len < 4096) {
+					offset = 1;
+				} else {
+					offset = 0;
+				}
+
+				sprintf(buf+offset, "%x\r\n", len);
+				buf[6+len] = '\r';
+				buf[6+len+1] = '\n';
+				len += 2 + 2 + 4 - offset;
+			}
+
+			if (ast_iostream_write(ser->stream, buf+offset, len) != len) {
 				ast_debug(1, "ast_iostream_write() failed: %s\n", strerror(errno));
 				close_connection = 1;
 				break;
 			}
 		}
+
+		ast_free(buf);
 	}
 
 	ast_free(content_length_header);
