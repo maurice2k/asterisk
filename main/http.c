@@ -580,6 +580,14 @@ void ast_http_send(struct ast_tcptls_session_instance *ser,
 			}
 		}
 
+		if (content_length == 0 && len == 0) {
+			// send final chunk
+			if (ast_iostream_write(ser->stream, "0\r\n\r\n", 5) != 5) {
+				ast_debug(1, "ast_iostream_write() failed: %s\n", strerror(errno));
+				close_connection = 1;
+			}
+		}
+
 		ast_free(buf);
 	}
 
