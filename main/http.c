@@ -567,7 +567,9 @@ void ast_http_send(struct ast_tcptls_session_instance *ser,
 					offset = 0;
 				}
 
-				sprintf(buf+offset, "%x\r\n", len);
+				sprintf(buf+offset, "%x", len);
+				buf[4] = '\r';
+				buf[5] = '\n';
 				buf[6+len] = '\r';
 				buf[6+len+1] = '\n';
 				len += 2 + 2 + 4 - offset;
