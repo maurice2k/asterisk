@@ -549,10 +549,11 @@ void ast_http_send(struct ast_tcptls_session_instance *ser,
 		ast_debug(1, "ast_iostream_printf() failed: %s\n", strerror(errno));
 		close_connection = 1;
 	} else if (send_content && fd) {
-		buf = ast_malloc(4 + 2 + 4096 + 2);  // 4096 + some extra for chunked encoding (4 bytes for chunk size, 2 bytes for CRLF, 2 bytes for final CRLF)
+		int bufsize = 1024;  // works up to 64k (hex FFFF)
+		buf = ast_malloc(4 + 2 + bufsize + 2);  // bufsize + some extra for chunked encoding (4 bytes for chunk size, 2 bytes for CRLF, 2 bytes for final CRLF)
 
 		/* send file content */
-		while ((len = read(fd, buf+6, 4096)) > 0) {
+		while ((len = read(fd, buf+6, bufsize)) > 0) {
 			int offset = 6;
 
 			// check if we need to send chunked encoding
