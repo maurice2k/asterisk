@@ -556,7 +556,7 @@ void ast_http_send(struct ast_tcptls_session_instance *ser,
 			int offset = 6;
 
 			// check if we need to send chunked encoding
-			if (content_length == 0) {
+			if (content_length <= 0) {
 				if (len < 16) {
 					offset = 3;
 				} else if (len < 256) {
@@ -580,7 +580,7 @@ void ast_http_send(struct ast_tcptls_session_instance *ser,
 			}
 		}
 
-		if (content_length == 0 && len == 0) {
+		if (content_length <= 0 && len == 0) {
 			// send final chunk
 			if (ast_iostream_write(ser->stream, "0\r\n\r\n", 5) != 5) {
 				ast_debug(1, "ast_iostream_write() failed: %s\n", strerror(errno));
