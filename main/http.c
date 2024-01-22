@@ -471,6 +471,7 @@ void ast_http_send(struct ast_tcptls_session_instance *ser,
 	struct ast_str *server_header_field = ast_str_create(MAX_SERVER_NAME_LENGTH);
 	int send_content;
 	char *content_length_header = NULL;
+	int chunked_transfer = 0;
 
 	if (!ser || !server_header_field) {
 		/* The connection is not open. */
@@ -521,6 +522,8 @@ void ast_http_send(struct ast_tcptls_session_instance *ser,
 		lseek(fd, 0, SEEK_SET);
 	}
 
+	chunked_transfer = content_length <= 0;
+
 	send_content = method != AST_HTTP_HEAD || status_code >= 400;
 	if (!ast_asprintf(&content_length_header, "Content-Length: %d\r\n", content_length)) {
 		content_length_header = NULL;
@@ -535,6 +538,7 @@ void ast_http_send(struct ast_tcptls_session_instance *ser,
 		"%s"
 		"%s"
 		"%s"
+		"%s"
 		"\r\n"
 		"%s",
 		status_code, status_title ? status_title : "OK",
@@ -542,6 +546,7 @@ void ast_http_send(struct ast_tcptls_session_instance *ser,
 		timebuf,
 		close_connection ? "Connection: close\r\n" : "",
 		static_content ? "" : "Cache-Control: no-cache, no-store\r\n",
+		chunked_transfer ? "Transfer-Encoding: chunked\r\n" : "",
 		http_header ? ast_str_buffer(http_header) : "",
 		content_length_header != NULL && content_length > 0 ? content_length_header : "",
 		send_content && out && ast_str_strlen(out) ? ast_str_buffer(out) : ""
@@ -559,7 +564,7 @@ void ast_http_send(struct ast_tcptls_session_instance *ser,
 			int offset = 6;
 
 			// check if we need to send chunked encoding
-			if (content_length <= 0) {
+			if (chunked_transfer) {
 				if (len < 16) {
 					offset = 3;
 				} else if (len < 256) {
@@ -587,7 +592,7 @@ void ast_http_send(struct ast_tcptls_session_instance *ser,
 			ast_debug(1, "ast_http_send(): read %d bytes (fd)\n", len);
 		}
 
-		if (content_length <= 0 && len == 0) {
+		if (chunked_transfer && len == 0) {
 			// send final chunk
 			if (ast_iostream_write(ser->stream, "0\r\n\r\n", 5) != 5) {
 				ast_debug(1, "ast_iostream_write() failed: %s\n", strerror(errno));
