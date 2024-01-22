@@ -552,6 +552,8 @@ void ast_http_send(struct ast_tcptls_session_instance *ser,
 		int bufsize = 1024;  // works up to 64k (hex FFFF)
 		buf = ast_malloc(4 + 2 + bufsize + 2);  // bufsize + some extra for chunked encoding (4 bytes for chunk size, 2 bytes for CRLF, 2 bytes for final CRLF)
 
+		ast_debug(1, "ast_http_send(): start reading (fd)\n");
+
 		/* send file content */
 		while ((len = read(fd, buf+6, bufsize)) > 0) {
 			int offset = 6;
@@ -581,6 +583,8 @@ void ast_http_send(struct ast_tcptls_session_instance *ser,
 				close_connection = 1;
 				break;
 			}
+
+			ast_debug(1, "ast_http_send(): read %d bytes (fd)\n", len);
 		}
 
 		if (content_length <= 0 && len == 0) {
@@ -590,6 +594,8 @@ void ast_http_send(struct ast_tcptls_session_instance *ser,
 				close_connection = 1;
 			}
 		}
+
+		ast_debug(1, "ast_http_send(): EOF (fd)\n");
 
 		ast_free(buf);
 	}
