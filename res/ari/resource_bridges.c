@@ -652,6 +652,7 @@ void ast_ari_bridges_record(struct ast_variable *headers,
 	size_t uri_name_maxlen;
 	struct bridge_channel_control_thread_data *thread_data;
 	pthread_t threadid;
+	struct ast_format *format;
 
 	ast_assert(response != NULL);
 
@@ -713,6 +714,20 @@ void ast_ari_bridges_record(struct ast_variable *headers,
 		return;
 	}
 
+	if (args->return_stream) {
+		int pipefd[2];
+		if (pipe(pipefd) != 0) {
+			ast_ari_response_error(
+				response, 500, "Internal Server Error",
+				"Failed to create pipe");
+			return;
+		}
+		response->fd = pipefd[0];
+		options->return_stream_fd = pipefd[1];
+		ast_debug(3, "Record streaming using pipe; write_fd=%d, read_fd=%d\n",
+			options->return_stream_fd, response->fd);
+	}
+
 	if (options->if_exists == AST_RECORD_IF_EXISTS_ERROR) {
 		ast_ari_response_error(
 			response, 400, "Bad Request",
@@ -720,7 +735,8 @@ void ast_ari_bridges_record(struct ast_variable *headers,
 		return;
 	}
 
-	if (!ast_get_format_for_file_ext(options->format)) {
+	format = ast_get_format_for_file_ext(options->format);
+	if (!format) {
 		ast_ari_response_error(
 			response, 422, "Unprocessable Entity",
 			"specified format is unknown on this system");
@@ -760,6 +776,22 @@ void ast_ari_bridges_record(struct ast_variable *headers,
 				"Internal Server Error");
 			break;
 		}
+		return;
+	}
+
+	if (args->return_stream && response->fd > 0) {
+		static const char *format_type_names[AST_MEDIA_TYPE_TEXT + 1] = {
+			[AST_MEDIA_TYPE_UNKNOWN] = "binary",
+			[AST_MEDIA_TYPE_AUDIO] = "audio",
+			[AST_MEDIA_TYPE_VIDEO] = "video",
+			[AST_MEDIA_TYPE_IMAGE] = "image",
+			[AST_MEDIA_TYPE_TEXT] = "text",
+		};
+
+		ast_str_append(&response->headers, 0, "Content-Type: %s/%s\r\n",
+			format_type_names[ast_format_get_type(format)],
+			args->format);
+		ast_ari_response_ok(response, ast_json_null());
 		return;
 	}
 

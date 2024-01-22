@@ -373,6 +373,8 @@ struct ast_ari_bridges_record_args {
 	int beep;
 	/*! DTMF input to terminate recording. */
 	const char *terminate_on;
+	/*! Returns recording as stream */
+	int return_stream;
 };
 /*!
  * \brief Body parsing function for /bridges/{bridgeId}/record.

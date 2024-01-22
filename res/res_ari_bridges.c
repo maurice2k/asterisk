@@ -1395,6 +1395,10 @@ int ast_ari_bridges_record_parse_body(
 	if (field) {
 		args->terminate_on = ast_json_string_get(field);
 	}
+	field = ast_json_object_get(body, "returnStream");
+	if (field) {
+		args->return_stream = ast_json_is_true(field);
+	}
 	return 0;
 }
 
@@ -1440,6 +1444,9 @@ static void ast_ari_bridges_record_cb(
 		} else
 		if (strcmp(i->name, "terminateOn") == 0) {
 			args.terminate_on = (i->value);
+		} else
+		if (strcmp(i->name, "returnStream") == 0) {
+			args.return_stream = ast_true(i->value);
 		} else
 		{}
 	}
