@@ -29,7 +29,6 @@ import os.path
 
 from asterisk_processor import AsteriskProcessor
 from argparse import ArgumentParser as ArgParser
-from swagger_model import ResourceListing
 from transform import Transform
 
 TOPDIR = os.path.dirname(os.path.abspath(__file__))
@@ -38,7 +37,7 @@ TOPDIR = os.path.dirname(os.path.abspath(__file__))
 def rel(file):
     """Helper to get a file relative to the script's directory
 
-    @parm file: Relative file path.
+    @param file: Relative file path.
     """
     return os.path.join(TOPDIR, file)
 
@@ -48,8 +47,10 @@ def main(argv):
     )
 
     parser = ArgParser(description=description)
-    parser.add_argument('--resources', type=str, default="rest-api/resources.json",
-                        help="resources.json file to process", required=False)
+    parser.add_argument('--openapi', type=str, default=None,
+                        help="OpenAPI 3.1 JSON file to process", required=False)
+    parser.add_argument('--resources', type=str, default=None,
+                        help="(Legacy) Swagger 1.x resources.json file to process", required=False)
     parser.add_argument('--source-dir', type=str, default=".",
                         help="Asterisk source directory", required=False)
     parser.add_argument('--dest-dir', type=str, default="doc/rest-api",
@@ -60,6 +61,65 @@ def main(argv):
     args = parser.parse_args()
     if not args:
         return
+
+    # Determine which mode to use
+    if args.openapi and args.resources:
+        print("Error: Cannot specify both --openapi and --resources", file=sys.stderr)
+        return 1
+    elif args.resources:
+        # Legacy Swagger 1.x mode
+        return run_swagger_mode(args)
+    else:
+        # OpenAPI 3.1 mode (default)
+        if not args.openapi:
+            args.openapi = "rest-api/api-docs/openapi3/openapi3.json"
+        return run_openapi_mode(args)
+
+
+def run_openapi_mode(args):
+    """Process OpenAPI 3.1 spec"""
+    from openapi_model import OpenAPISpec
+
+    renderer = pystache.Renderer(search_dirs=[TOPDIR], missing_tags='strict')
+    processor = AsteriskProcessor(wiki_prefix=args.docs_prefix)
+
+    API_TRANSFORMS = [
+        Transform(rel('api.wiki.mustache'),
+                  '%s/{{name_title}}_REST_API.md' % args.dest_dir),
+        Transform(rel('res_ari_resource.c.mustache'),
+                  'res/res_ari_{{c_name}}.c'),
+        Transform(rel('ari_resource.h.mustache'),
+                  'res/ari/resource_{{c_name}}.h'),
+        Transform(rel('ari_resource.c.mustache'),
+                  'res/ari/resource_{{c_name}}.c', overwrite=False),
+    ]
+
+    RESOURCES_TRANSFORMS = [
+        Transform(rel('models.wiki.mustache'),
+                  '%s/Asterisk_REST_Data_Models.md' % args.dest_dir),
+        Transform(rel('ari.make.mustache'), 'res/ari.make'),
+        Transform(rel('ari_model_validators.h.mustache'),
+                  'res/ari/ari_model_validators.h'),
+        Transform(rel('ari_model_validators.c.mustache'),
+                  'res/ari/ari_model_validators.c'),
+    ]
+
+    # Load the OpenAPI spec (this parses and processes everything)
+    spec = OpenAPISpec.load_file(args.openapi, processor)
+
+    # Render the templates for each API resource
+    for api in spec.apis:
+        for transform in API_TRANSFORMS:
+            transform.render(renderer, api, args.source_dir)
+
+    # Render the templates for the overall resources
+    for transform in RESOURCES_TRANSFORMS:
+        transform.render(renderer, spec, args.source_dir)
+
+
+def run_swagger_mode(args):
+    """Process legacy Swagger 1.x spec"""
+    from swagger_model import ResourceListing
 
     renderer = pystache.Renderer(search_dirs=[TOPDIR], missing_tags='strict')
     processor = AsteriskProcessor(wiki_prefix=args.docs_prefix)
@@ -97,6 +157,7 @@ def main(argv):
             transform.render(renderer, api, args.source_dir)
     for transform in RESOURCES_TRANSFORMS:
         transform.render(renderer, resources, args.source_dir)
+
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv) or 0)
